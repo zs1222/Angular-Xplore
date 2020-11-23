@@ -1,0 +1,120 @@
+// index.html style block
+#gameContainer {
+  width: 100%;//100vw;
+  height: 100%;//100vh;
+}
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* try to handle mobile dialog */
+canvas + * {
+  z-index: 2;
+}
+
+// TemplateData style.css
+.webgl-content * {
+  border: 0; margin: 0; padding: 0
+}
+
+.webgl-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+.webgl-content .logo, .progress {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+.webgl-content .logo {
+  background: url('/assets/progressLogo.Light.png') no-repeat center / contain;
+  width: 154px;
+  height: 130px;
+}
+
+.webgl-content .progress {
+  height: 18px;
+  width: 141px;
+  margin-top: 90px;
+}
+
+.webgl-content .progress .empty {
+  background: url('/assets/progressEmpty.Light.png') no-repeat right / cover;
+  float: right;
+  width: 100%;
+  height: 100%;
+  display: inline-block;
+}
+
+.webgl-content .progress .full {
+  background: url('/assets/progressFull.Light.png') no-repeat left / cover;
+  float: left;
+  width: 0%;
+  height: 100%;
+  display: inline-block;
+}
+
+.webgl-content .logo.Dark {
+  background-image: url('/assets/progressLogo.Dark.png');
+}
+.webgl-content .progress.Dark .empty {
+  background-image: url('/assets/progressEmpty.Dark.png');
+}
+
+.webgl-content .progress.Dark .full {
+  background-image: url('/assets/progressFull.Dark.png');
+}
+
+.webgl-content .footer {
+  margin-top: 5px;
+  height: 38px;
+  line-height:38px;
+  font-family: Helvetica, Verdana, Arial, sans-serif;
+  font-size: 18px;
+}
+
+.webgl-content .footer .webgl-logo, .title, .fullscreen {
+  height: 100%;
+  display: inline-block;
+  background: transparent center no-repeat;
+}
+
+.webgl-content .footer .webgl-logo {
+  background-image: url('/assets/webgl-logo.png');
+  width: 204px; float: left;
+}
+
+.webgl-content .footer .title {
+  margin-right: 10px;
+  float: right;
+}
+
+.webgl-content .footer .fullscreen {
+  background-image: url('/assets/fullscreen.png');
+  width: 38px;
+  float: right;
+}
+
+#modalContent {
+  position: absolute;
+  top: 200px;
+  left: 400px;
+  height: 285px;
+  width: 500px;
+}
+
+#fullscreenContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}

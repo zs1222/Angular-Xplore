@@ -1,0 +1,26 @@
+
+<div class="sidebar-group">
+	<div class="logo">Siemens Logo Placeholder</div>
+	<div class="divider"></div>
+	<div class="toggle-buttons">
+		<button [ngClass]="tabToggle == sidebarTabs.PARTICIPANTLIST ? 'selected' : 'unselected'" class="left" type="button" (click)="showParticipantList()">
+			<svg ibmIconUser size="16" ></svg>
+		</button>
+		<button [ngClass]="tabToggle == sidebarTabs.CHAT ? 'selected' : 'unselected'" class="right" type="button" (click)="showChat()">
+			<svg ibmIconChat size="16" ></svg>
+		</button>
+	</div>
+	<div class="tabs" [hidden]="tabToggle == sidebarTabs.CHAT">
+		Participant List Placeholder
+	</div>
+	<div class="tabs" [hidden]="tabToggle == sidebarTabs.PARTICIPANTLIST">
+		<p>Chatroom</p>
+		<app-chat></app-chat>
+	</div>
+</div>
+
+
+
+
+
+

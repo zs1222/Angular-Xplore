@@ -1,0 +1,61 @@
+@import './workshop-variables.scss';
+
+#workshop-overlay-container {
+  // Define static sizing vars
+  $grid-padding: 0px;
+  $grid-gap: 0px;
+
+  // Define calculated sizing vars
+  // static sizing vars for calculations are imported from shared variables file above
+  $first-column-width: calc(#{$webgl-width} - #{$host-video-width});
+  $first-row-height: calc(#{$webgl-height} - #{$host-video-height});
+  $full-workshop-height: calc(#{$first-row-height} + #{$host-video-height} + #{$footer-height});
+  $full-workshop-width: calc(#{$first-column-width} + #{$host-video-width} + #{$sidebar-width});
+
+  // Workshop grid sizing and display
+  padding: $grid-padding;
+  box-sizing: border-box;
+  height: $full-workshop-height;
+  width: $full-workshop-width;
+  display: grid;
+  grid-template-columns: $first-column-width $host-video-width $sidebar-width;
+  grid-template-rows: $first-row-height $host-video-height $footer-height;
+  gap: $grid-gap $grid-gap;
+
+  // Workshop grid positioning in parent -- this centers the workshop at all times in the window
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: calc(#{$full-workshop-height} * -0.5);
+  margin-left: calc(#{$full-workshop-width} * -0.5);
+
+  // Grid sizing definitions for all sub components of the workshop
+  app-footer-controls {
+    grid-column: 1 / 3;
+    grid-row: 3 / 4;
+  }
+
+  app-sidebar {
+    grid-column: 3 / 4;
+    grid-row: 1 / 3;
+  }
+
+  app-host-video {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    z-index: 99;
+    position: relative;
+  }
+
+  app-video-controls {
+    grid-column: 3 / 4;
+    grid-row: 3 / 4;
+  }
+
+  #workshop-content {
+    grid-column: 1 / 3;
+    grid-row: 1 / 3;
+
+    position: relative;
+  }
+}

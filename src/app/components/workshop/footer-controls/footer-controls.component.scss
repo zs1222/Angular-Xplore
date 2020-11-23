@@ -1,0 +1,25 @@
+@import '../workshop-variables.scss';
+
+#footer-controls-container {
+    $grid-padding: 10px;
+    $grid-gap: 10px;
+    $full-width: calc(100% - 2 * #{$grid-padding} - #{$grid-gap});
+    $first-column: calc(#{$full-width} * 25%);
+    $second-column: calc(#{$full-width} * 75%);
+
+    padding: $grid-padding;
+    box-sizing: border-box;
+    height: 100%;
+    width: 100%;
+    background-color: #FFFFFF;
+
+    display: grid;
+    grid-template-columns: $first-column $second-column;
+    grid-template-rows: 100%;
+    gap: $grid-gap $grid-gap;
+
+    app-video-container {
+        grid-column: 2 / 2;
+        grid-row: 1 / 1;
+    }
+}

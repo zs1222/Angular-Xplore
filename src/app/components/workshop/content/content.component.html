@@ -1,0 +1,2 @@
+<img id="image-content" *ngIf="image" [src]="image">
+<iframe id="video" allow="autoplay" allowfullscreen="" *ngIf="videoManagerUrl" frameborder="0" [src]="videoManagerUrl | safeUrl" scrolling="auto" target="_parent"></iframe>

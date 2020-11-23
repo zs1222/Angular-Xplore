@@ -1,0 +1,422 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  AppName:
+    Type: String
+    Description: Name of the application
+    Default: "xplore-web"
+  CodeBuildContainerType:
+    Type: String
+    Description: Container type to use for CodeBuild projects
+    AllowedValues:
+      - LINUX_CONTAINER
+      - ARM_CONTAINER
+      - LINUX_GPU_CONTAINER
+      - WINDOWS_CONTAINER
+      - WINDOWS_SERVER_2019_CONTAINER
+    Default: LINUX_CONTAINER
+  CodeBuildComputeType:
+    Type: String
+    Description: Compute type for CodeBuild projects.  Smaller is cheaper
+    AllowedValues:
+      - BUILD_GENERAL1_SMALL
+      - BUILD_GENERAL1_MEDIUM
+      - BUILD_GENERAL1_LARGE
+    Default: BUILD_GENERAL1_SMALL
+  CodeBuildImage:
+    Type: String
+    Description: Image name to use for CodeBuild projects
+    Default: aws/codebuild/standard:4.0
+  RepositoryBranch:
+    Type: String
+    Description: Branch to watch in CodeCommit repo from CodePipeline
+    Default: master
+
+Resources:
+  S3BucketDev:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AppName}-${AWS::AccountId}-dev
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+  S3BucketStg:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AppName}-${AWS::AccountId}-stg
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+  S3BucketProd:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AppName}-${AWS::AccountId}-prod
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+  CodeBuildServicePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CodeBuildServicePolicy
+      Roles:
+        - !Ref CodeBuildServiceRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "arn:aws:logs:*:*:*"
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:PutObject
+            Resource:
+              - !Sub "arn:aws:s3:::codepipeline-${AWS::Region}-*/*"
+              - !Sub "arn:aws:s3:::${AppName}-deployment-bucket/*"
+              - !Sub "arn:aws:s3:::${CodePipelineArtifactStoreBucket}/*"
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${AppName}-build
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: !Ref CodeBuildContainerType
+        ComputeType: !Ref CodeBuildComputeType
+        Image: !Ref CodeBuildImage
+      Source:
+        SourceIdentifier: SourceArtifact
+        Type: CODEPIPELINE
+      TimeoutInMinutes: 10
+  CodePipelineRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Sub "${AppName}-cp-service-role"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codepipeline.amazonaws.com
+                - cloudformation.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: /
+      Policies:
+        - PolicyName: !Sub "${AppName}-service-policy"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "iam:PassRole"
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - s3:*
+                  - cloudfront:CreateDistribution
+                  - cloudfront:TagResource
+                  - cloudfront:GetDistribution
+                  - cloudfront:UpdateDistribution
+                  - cloudfront:DeleteDistribution
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - "cloudformation:CreateChangeSet"
+                  - "cloudformation:CreateStack"
+                  - "cloudformation:CreateUploadBucket"
+                  - "cloudformation:DeleteStack"
+                  - "cloudformation:DeleteChangeSet"
+                  - "cloudformation:Describe*"
+                  - "cloudformation:List*"
+                  - "cloudformation:UpdateStack"
+                  - "cloudformation:ValidateTemplate"
+                  - "cloudformation:ExecuteChangeSet"
+                  - "cloudformation:Get*"
+                Resource:
+                  - !Sub arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}*
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                Resource: !Sub "arn:aws:s3:::${CodePipelineArtifactStoreBucket}/*"
+              - Effect: Allow
+                Action:
+                  - "s3:ListAllMyBuckets"
+                  - "s3:HeadBucket"
+                Resource: "*"
+                Sid: S3ListPermissions
+              - Effect: Allow
+                Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                  - codebuild:StopBuild
+                Resource:
+                  - !GetAtt CodeBuildProject.Arn
+              - Effect: Allow
+                Action:
+                  - codecommit:GetBranch
+                  - codecommit:GetCommit
+                  - codecommit:UploadArchive
+                  - codecommit:GetUploadArchiveStatus
+                  - codecommit:CancelUploadArchive
+                Resource:
+                  - !GetAtt Repository.Arn
+  CodePipelineSourceBucket:
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: Delete
+    Properties:
+      AccessControl: Private
+      BucketName: !Sub "${AppName}-codepipeline-source-bucket"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+  CodePipelineArtifactStoreBucket:
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: Delete
+    Properties:
+      AccessControl: Private
+      BucketName: !Sub "${AppName}-codepipeline-artifact-store-bucket"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+  Repository:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: xplore-web-app
+      RepositoryDescription: Digital Xplore Web App
+  CodePipeline:
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn: [ "S3BucketDev", "S3BucketStg", "S3BucketProd"]
+    Properties:
+      ArtifactStore:
+        Type: S3
+        Location: !Ref CodePipelineArtifactStoreBucket
+      Name: !Sub ${AppName}-pipeline
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: Source
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: CodeCommit
+              OutputArtifacts:
+                - Name: SourceArtifact
+              Configuration:
+                RepositoryName: !GetAtt Repository.Name
+                BranchName: !Ref RepositoryBranch
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            # - Name: Test
+            #   InputArtifacts:
+            #     - Name: SourceArtifact
+            #   ActionTypeId:
+            #     Category: Test
+            #     Owner: AWS
+            #     Version: 1
+            #     Provider: CodeBuild
+            #   OutputArtifacts:
+            #     - Name: DevArtifact
+            #   Configuration:
+            #     ProjectName: !Sub ${AppName}-build
+            #     EnvironmentVariables: '[{"environment":"dev"}]'
+            #   RunOrder: 1
+            - Name: BuildDev
+              InputArtifacts:
+                - Name: SourceArtifact
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              OutputArtifacts:
+                - Name: DevArtifact
+              Configuration:
+                ProjectName: !Sub ${AppName}-build
+                EnvironmentVariables: |
+                  [{"name":"environment", "value": "dev", "type": "PLAINTEXT"}]
+              RunOrder: 2
+            - Name: BuildStg
+              InputArtifacts:
+                - Name: SourceArtifact
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              OutputArtifacts:
+                - Name: StgArtifact
+              Configuration:
+                ProjectName: !Sub ${AppName}-build
+                EnvironmentVariables: |
+                  [{"name":"environment", "value": "stg", "type": "PLAINTEXT"}]
+              RunOrder: 2
+            - Name: BuildProd
+              InputArtifacts:
+                - Name: SourceArtifact
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              OutputArtifacts:
+                - Name: ProdArtifact
+              Configuration:
+                ProjectName: !Sub ${AppName}-build
+                EnvironmentVariables: |
+                  [{"name":"environment", "value": "prod", "type": "PLAINTEXT"}]
+              RunOrder: 2
+        - Name: DeployDev
+          Actions:
+            - Name: DeployInfra
+              InputArtifacts:
+                - Name: DevArtifact
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CodePipelineRole.Arn
+                Capabilities: CAPABILITY_NAMED_IAM
+                StackName: xplore-web-dev
+                TemplatePath: 'DevArtifact::infrastructure/web.yml'
+                ParameterOverrides: |
+                  { "Environment": "dev" }
+              RunOrder: 1
+            - Name: DeployCode
+              InputArtifacts:
+                - Name: DevArtifact
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: S3
+              Configuration:
+                BucketName: !Ref S3BucketDev
+                Extract: true
+              RunOrder: 2
+        - Name: ApproveStg
+          Actions:
+            - Name: ApproveStg
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Version: 1
+                Provider: Manual
+              RunOrder: 1
+        - Name: DeployStg
+          Actions:
+            - Name: DeployInfra
+              InputArtifacts:
+                - Name: StgArtifact
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CodePipelineRole.Arn
+                Capabilities: CAPABILITY_NAMED_IAM
+                StackName: xplore-web-stg
+                TemplatePath: 'StgArtifact::infrastructure/web.yml'
+                ParameterOverrides: |
+                  { "Environment": "stg" }
+              RunOrder: 1
+            - Name: DeployCode
+              InputArtifacts:
+                - Name: StgArtifact
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: S3
+              Configuration:
+                BucketName: !Ref S3BucketStg
+                Extract: true
+              RunOrder: 2
+        - Name: ApproveProd
+          Actions:
+            - Name: ApproveProd
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Version: 1
+                Provider: Manual
+              RunOrder: 1
+        - Name: DeployProd
+          Actions:
+            - Name: DeployInfra
+              InputArtifacts:
+                - Name: ProdArtifact
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                RoleArn: !GetAtt CodePipelineRole.Arn
+                Capabilities: CAPABILITY_NAMED_IAM
+                StackName: xplore-web-prod
+                TemplatePath: 'ProdArtifact::infrastructure/web.yml'
+                ParameterOverrides: |
+                  { "Environment": "prod" }
+              RunOrder: 1
+            - Name: DeployCode
+              InputArtifacts:
+                - Name: ProdArtifact
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: S3
+              Configuration:
+                BucketName: !Ref S3BucketProd
+                Extract: true
+              RunOrder: 2
+
+Outputs:
+  BucketDomainNameDev:
+    Value: !GetAtt 'S3BucketDev.DomainName'
+    Export:
+      Name: BucketDomainName-dev
+  BucketDomainNameStg:
+    Value: !GetAtt 'S3BucketStg.DomainName'
+    Export:
+      Name: BucketDomainName-stg
+  BucketDomainNameProd:
+    Value: !GetAtt 'S3BucketProd.DomainName'
+    Export:
+      Name: BucketDomainName-prod

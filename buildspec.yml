@@ -1,0 +1,23 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 10
+    commands:
+      - npm install
+  build:
+    commands:
+      # linting and unit tests
+      - npm run lint
+      - npm test
+      # create deployment package
+      - mkdir $environment
+      - npm run build -- --aot=true --configuration=$environment --outputPath=$environment
+      - mkdir $environment/infrastructure
+      - mv infrastructure/web.yml $environment/infrastructure/web.yml
+artifacts:
+  files:
+    - infrastructure/*
+    - ./**/*
+  base-directory: $environment

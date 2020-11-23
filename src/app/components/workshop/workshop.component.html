@@ -1,0 +1,9 @@
+<div id="workshop-overlay-container">
+  <app-host-video></app-host-video>
+  <app-sidebar></app-sidebar>
+  <app-video-controls *ngIf="videoRoom" [localParticipant]="videoRoom.localParticipant" [workshopParticipant]="workshopParticipant"></app-video-controls>
+  <app-footer-controls></app-footer-controls>
+  <div id="workshop-content">
+    <router-outlet></router-outlet>
+  </div>
+</div>

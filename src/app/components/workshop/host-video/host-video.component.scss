@@ -1,0 +1,11 @@
+#host-track-container {
+  width: 100%;
+  height: 100%;
+
+  app-video-frame {
+    height: 100%;
+    width: 200px;
+    float: right;
+    background-color: black;
+  }
+}

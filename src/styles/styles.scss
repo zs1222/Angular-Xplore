@@ -1,0 +1,33 @@
+/* You can add global styles to this file, and also import other style files */
+@import '~carbon-components/scss/globals/scss/styles.scss';
+@import './colors.scss';
+
+body {
+  margin: 0;
+  background-color: rgb(44,46,49);
+  height: 100vh;
+  width: 100vw;
+}
+
+button {
+  &.selected {
+    color: map-get($primary, white);
+    svg {
+      fill: map-get($primary, white);
+    }
+    &.right {
+      background: map-get($primary, blue-green-gradient);
+    }
+    &.left {
+      background: map-get($primary, green-blue-gradient);
+    }
+  }
+  &.unselected {
+    background-color: map-get($primary, background-color);
+    color: map-get($primary, grey);
+    svg {
+      fill: map-get($primary, grey);
+    }
+  }
+}
+

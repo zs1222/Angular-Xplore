@@ -1,0 +1,5 @@
+<div id="host-track-container">
+  <app-video-frame *ngIf="participantTrackManager" 
+    [participant]="participantTrackManager.participant" [twilioAudioTrack]="participantTrackManager.audioTrack" [twilioVideoTrack]="participantTrackManager.videoTrack">
+  </app-video-frame>
+</div>

@@ -1,0 +1,5 @@
+<div id="customer-track-container">
+  <app-video-frame *ngFor="let manager of participantTrackManagers"
+    [participant]="manager.participant" [twilioAudioTrack]="manager.audioTrack" [twilioVideoTrack]="manager.videoTrack">
+  </app-video-frame>
+</div>
